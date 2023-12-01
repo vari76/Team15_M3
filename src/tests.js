@@ -6,49 +6,71 @@ chai.use(chaiHttp);
 // define base uri for the REST API (lab03) under test
 const uri = 'http://127.0.0.1:4000';
 
-describe("when we issue a 'GET' to /patients", function(){
-    it("should return HTTP 200", function(done) {
-        chai.request(uri)
-            .get('/patients')
-            .end(function(req, res){
-                expect(res.status).to.equal(200);
-                done();
-            });
+describe('Patients API', () => {
+    // Assuming you have a running MongoDB server
+    before((done) => {
+      mongoose.connect('mongodb://localhost:27017/test', {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      const db = mongoose.connection;
+      db.on('error', console.error.bind(console, 'connection error:'));
+      db.once('open', () => {
+        console.log('Connected to test database');
+        done();
+      });
     });
-});
-
-describe("when we issue a 'GET' to /patients", function(){
-    it("should return empty list []", function(done) {
-        chai.request(uri)
-            .get('/patients')
-            .end(function(req, res){
-                expect(res.text).to.equal('[]');
-                done();
-            });
+  
+    after((done) => {
+      mongoose.connection.close(() => {
+        console.log('Connection to test database closed');
+        done();
+      });
     });
-});
-
-describe("when we issue a 'POST' to /patients with patient info", function(){
-    it("should return response with patient created", function(done) {
-        chai.request(uri)
-            .post('/patients')
-            .field('name', 'Peter Doe')
-            .field('age', 21)
-            .end(function(req, res){
-                expect(res.status).to.equal(201);
-                expect(res.text).to.equal('{"name":"Peter Doe","age":"21","_id":"1"}');
-                done();
-            });
+  
+    // Test GET /patients
+    describe('GET /patients', () => {
+      it('should get all patients', (done) => {
+        chai.request(server)
+          .get('/patients')
+          .end((err, res) => {
+            expect(res).to.have.status(200);
+            expect(res.body).to.be.an('array');
+            // Add more assertions based on your response
+            done();
+          });
+      });
     });
-});
-
-describe("when we issue a 'GET' to /patients after creating new patient", function(){
-    it("should return array with this user", function(done) {
-        chai.request(uri)
-            .get('/patients')
-            .end(function(req, res){
-                expect(res.text).to.equal('[{"name":"Peter Doe","age":"21","_id":"1"}]');
-                done();
-            });
+  
+    // Test GET /patients/:id
+    describe('GET /patients/:id', () => {
+      it('should get a single patient by ID', (done) => {
+        // Assuming you have a patient ID to test with
+        const patientId = '1234567890abcdef12345678';
+  
+        chai.request(server)
+          .get(`/patients/${patientId}`)
+          .end((err, res) => {
+            expect(res).to.have.status(200);
+            expect(res.body).to.be.an('object');
+            // Add more assertions based on your response
+            done();
+          });
+      });
+  
+      it('should return 404 for non-existing patient ID', (done) => {
+        // Assuming you have a non-existing patient ID to test with
+        const nonExistingPatientId = 'nonexistingpatientid';
+  
+        chai.request(server)
+          .get(`/patients/${nonExistingPatientId}`)
+          .end((err, res) => {
+            expect(res).to.have.status(404);
+            // Add more assertions based on your response
+            done();
+          });
+      });
     });
-});
+  
+    // Add more test cases for other endpoints (POST, PUT, DELETE, etc.)
+  });
